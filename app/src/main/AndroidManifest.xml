@@ -9,7 +9,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.SampleBluetoothRFCOMM">
-        <activity android:name=".MainActivity">
+        <activity android:name=".MainActivity" android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -18,4 +18,5 @@
         </activity>
     </application>
 
+    <uses-permission android:name="android.permission.BLUETOOTH" />
 </manifest>
