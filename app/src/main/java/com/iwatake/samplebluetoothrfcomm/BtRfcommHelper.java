@@ -21,7 +21,7 @@ public class BtRfcommHelper extends Thread {
     private static String TAG = "MyApp:BtRfcommHelper";
 
 
-    private String SERVER_SERVICE_UUID = "cb10eaad-fdcf-4c18-a0d7-067293b37cf3";
+    private String SERVER_SERVICE_UUID = "00001101-0000-1000-8000-00805F9B34FB";    // SPP
     private BluetoothDevice m_server;
     private BluetoothAdapter m_adapter = BluetoothAdapter.getDefaultAdapter();
     private BluetoothSocket m_socket;
