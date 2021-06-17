@@ -6,6 +6,10 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import android.content.pm.PackageManager;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -20,7 +24,7 @@ import android.widget.Toast;
 
 import java.util.ArrayList;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity  implements SensorEventListener {
     private final String TAG = "MyApp:MainActivity";
     private final int REQUEST_CODE_FOR_PERMISSIONS = 1234;;
     private final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.BLUETOOTH"};
@@ -38,6 +42,10 @@ public class MainActivity extends AppCompatActivity {
     private Button buttonClearAll;
     private Spinner spinnerDeviceList;
     private Button buttonConnect;
+
+    private SensorManager m_sensorManager;
+    private float[] m_acc = null;
+    private String m_previousTxString;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,6 +72,9 @@ public class MainActivity extends AppCompatActivity {
     private void startApp() {
         Log.d(TAG, "[startApp] in");
         getBtDeviceList();
+        m_acc = new float[3];
+        m_sensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
+        m_sensorManager.registerListener(this, m_sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),  SensorManager.SENSOR_DELAY_UI);
         Log.d(TAG, "[startApp] out");
     }
 
@@ -191,5 +202,62 @@ public class MainActivity extends AppCompatActivity {
                 this.finish();
             }
         }
+    }
+
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            float[] accRaw = event.values;
+            lowPassFilter(accRaw, m_acc);
+            Log.i(TAG, "[onSensorChanged] " + accRaw[0] + ", " + accRaw[1] + ", " + accRaw[2]);
+
+            String txString = analyzeGesture(m_acc[0] / 9.8f, m_acc[1] / 9.8f, m_acc[2] / 9.8f);
+            if (txString != m_previousTxString) {
+//                btRfcommHelper.send("d");
+                btRfcommHelper.send(txString);
+                textViewTxList.setText(textViewTxList.getText() + "\n" + txString);
+                scrollViewTxList.fullScroll((ScrollView.FOCUS_DOWN));
+            }
+            m_previousTxString = txString;
+        }
+    }
+
+    private void lowPassFilter(float[] accRaw, float[] accResult) {
+        final float RATIO = 0.5f;
+        for (int i = 0; i < accRaw.length; i++) {
+            accResult[i] = RATIO * accRaw[i] + (1 - RATIO) * accResult[i];
+        }
+    }
+
+    private String analyzeGesture(float x, float y, float z) {
+        String txString = "";
+        final float TH_MOVE = 0.4f;
+        final float TH_BEHAVIOR = 0.9f;
+        if (TH_MOVE < y && y < TH_BEHAVIOR) {
+            txString = "kbk";
+        } else if (TH_MOVE < -y && -y < TH_BEHAVIOR) {
+            txString = "kcrF";
+        } else if (TH_MOVE < x && x < TH_BEHAVIOR) {
+            txString = "kwkL";
+        } else if (TH_MOVE < -x && -x < TH_BEHAVIOR) {
+            txString = "kwkR";
+        } else if (TH_BEHAVIOR < y) {
+            txString = "khi";
+        } else if (TH_BEHAVIOR < -y) {
+            txString = "ksit";
+        } else if (TH_BEHAVIOR < x) {
+            txString = "kstr";
+        } else if (TH_BEHAVIOR < -x) {
+            txString = "kpee";
+        } else {
+            txString = "kbalance";
+        }
+        return txString;
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
     }
 }
