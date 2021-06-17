@@ -11,8 +11,11 @@ import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.ScrollView;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -23,11 +26,16 @@ public class MainActivity extends AppCompatActivity {
     private final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.BLUETOOTH"};
     private final BtRfcommHelper btRfcommHelper = new BtRfcommHelper();
 
-    private EditText editTextTxList;
-    private EditText editTextRxList;
+    private ScrollView scrollViewRxList;
+    private ScrollView scrollViewTxList;
+    private TextView textViewRxList;
+    private TextView textViewTxList;
     private EditText editTextTx;
     private Button buttonSend;
-    private Button buttonClear;
+    private CheckBox checkBoxCr;
+    private CheckBox checkBoxLf;
+    private Button buttonClearTx;
+    private Button buttonClearAll;
     private Spinner spinnerDeviceList;
     private Button buttonConnect;
 
@@ -37,6 +45,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         getViews();
+        resetViews();
         setEventListeners();
 
         if (checkPermissions()) {
@@ -53,35 +62,30 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startApp() {
-        Log.i(TAG, "[startApp] in");
-        getDeviceList();
-
-
-//        if (!btRfcommHelper.connect()) {
-//            Log.w(TAG, "[startApp] failed to connect");
-//            return;
-//        }
-//        btRfcommHelper.start();
-        Log.i(TAG, "[startApp] out");
+        Log.d(TAG, "[startApp] in");
+        getBtDeviceList();
+        Log.d(TAG, "[startApp] out");
     }
 
-    private void getDeviceList() {
-        Log.i(TAG, "[getDeviceList] in");
+    private void getBtDeviceList() {
+        Log.d(TAG, "[getBtDeviceList] in");
         ArrayList<String> nameList = btRfcommHelper.getNameList();
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         adapter.addAll(nameList);
         spinnerDeviceList.setAdapter(adapter);
-        Log.i(TAG, "[getDeviceList] out");
+        Log.d(TAG, "[getBtDeviceList] out");
     }
 
     private void stopApp() {
-        Log.i(TAG, "[stopApp] in");
-        if (!btRfcommHelper.disconnect()) {
-            Log.w(TAG, "[stopApp] failed to disconnect");
-            return;
+        Log.d(TAG, "[stopApp] in");
+        if (buttonConnect.getText().equals("DISCONNECT")) {
+            if (!btRfcommHelper.disconnect()) {
+                Log.e(TAG, "[stopApp] failed to disconnect");
+                return;
+            }
         }
-        Log.i(TAG, "[stopApp] out");
+        Log.d(TAG, "[stopApp] out");
     }
 
     private void setEventListeners() {
@@ -96,7 +100,8 @@ public class MainActivity extends AppCompatActivity {
                     btRfcommHelper.start();
                     buttonConnect.setText("DISCONNECT");
                     buttonSend.setEnabled(true);
-                    buttonClear.setEnabled(true);
+                    textViewTxList.setText("");
+                    textViewRxList.setText("");
                 } else {
                     Log.i(TAG, "[buttonConnect] failed");
                     Toast.makeText(this, "Connection failed", Toast.LENGTH_SHORT).show();
@@ -105,24 +110,65 @@ public class MainActivity extends AppCompatActivity {
                 btRfcommHelper.disconnect();
                 buttonConnect.setText("CONNECT");
                 buttonSend.setEnabled(false);
-                buttonClear.setEnabled(false);
             }
         });
 
+        buttonSend.setOnClickListener((View v) -> {
+            String txString = editTextTx.getText().toString();
+            if (checkBoxCr.isChecked()) {
+                txString += "\r";
+            }
+            if (checkBoxLf.isChecked()) {
+                txString += "\n";
+            }
+            btRfcommHelper.send(txString);
+            textViewTxList.setText(textViewTxList.getText() + "\n" + txString);
+            scrollViewTxList.fullScroll((ScrollView.FOCUS_DOWN));
+        });
+
+        buttonClearTx.setOnClickListener((View v) -> {
+            editTextTx.setText("");
+        });
+
+        buttonClearAll.setOnClickListener((View v) -> {
+            editTextTx.setText("");
+            textViewRxList.setText("");
+            textViewTxList.setText("");
+        });
+
+        btRfcommHelper.setRxCallback((String text) -> {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    textViewRxList.setText(textViewRxList.getText() + text);
+                    scrollViewRxList.fullScroll((ScrollView.FOCUS_DOWN));
+                }
+            });
+        });
     }
 
     private void getViews() {
-        editTextTxList = findViewById(R.id.editTextTxList);
-        editTextRxList = findViewById(R.id.editTextRxList);
+        scrollViewRxList = findViewById(R.id.scrollViewRxList);
+        scrollViewTxList = findViewById(R.id.scrollViewTxList);
+        textViewRxList = findViewById(R.id.textViewRxList);
+        textViewTxList = findViewById(R.id.textViewTxList);
         editTextTx = findViewById(R.id.editTextTx);
         buttonSend = findViewById(R.id.buttonSend);
-        buttonClear = findViewById(R.id.buttonClear);
+        checkBoxCr = findViewById(R.id.checkBoxCr);
+        checkBoxLf = findViewById(R.id.checkBoxLf);
+        buttonClearTx = findViewById(R.id.buttonClearTx);
+        buttonClearAll = findViewById(R.id.buttonClearAll);
         spinnerDeviceList = findViewById(R.id.spinnerDeviceList);
         buttonConnect = findViewById(R.id.buttonConnect);
+    }
 
+    private void resetViews() {
         buttonConnect.setText("CONNECT");
         buttonSend.setEnabled(false);
-        buttonClear.setEnabled(false);
+        checkBoxCr.setChecked(false);
+        checkBoxLf.setChecked(false);
+        textViewTxList.setText("");
+        textViewRxList.setText("");
     }
 
     private boolean checkPermissions() {
@@ -141,7 +187,7 @@ public class MainActivity extends AppCompatActivity {
             if(checkPermissions()){
                 startApp();
             } else{
-                Log.w(TAG, "[onRequestPermissionsResult] Failed to get permissions");
+                Log.e(TAG, "[onRequestPermissionsResult] Failed to get permissions");
                 this.finish();
             }
         }

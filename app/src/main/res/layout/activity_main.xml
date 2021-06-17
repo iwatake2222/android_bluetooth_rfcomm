@@ -10,40 +10,43 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
-
-        <EditText
-            android:id="@+id/editTextRxList"
-            android:layout_width="match_parent"
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:ems="10"
-            android:minLines="5"
-            android:maxLines="5"
-            android:gravity="start|top"
-            android:inputType="none"
-            android:text="RX text"
-            android:focusable="false"
-            android:clickable="false"
-            android:cursorVisible="false"
-            />
-
-        <EditText
-            android:id="@+id/editTextTxList"
+            android:text="--- RX ------------" />
+        <ScrollView
+            android:id="@+id/scrollViewRxList"
             android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="2">
+            <TextView
+                android:id="@+id/textViewRxList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="RxList" />
+        </ScrollView>
+
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:ems="10"
-            android:minLines="5"
-            android:maxLines="5"
-            android:gravity="start|top"
-            android:inputType="none"
-            android:text="TX text"
-            android:focusable="false"
-            android:clickable="false"
-            android:cursorVisible="false"
-            />
+            android:text="--- TX ------------" />
+        <ScrollView
+            android:id="@+id/scrollViewTxList"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="2">
+            <TextView
+                android:id="@+id/textViewTxList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="TxList" />
+        </ScrollView>
+
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1"
             android:orientation="horizontal">
             <EditText
                 android:id="@+id/editTextTx"
@@ -56,20 +59,45 @@
             <Button
                 android:id="@+id/buttonSend"
                 android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:text="SEND" />
-            <Button
-                android:id="@+id/buttonClear"
-                android:layout_width="0dp"
                 android:layout_weight="1.1"
                 android:layout_height="wrap_content"
-                android:text="CLEAR" />
+                android:text="SEND" />
+            <CheckBox
+                android:id="@+id/checkBoxCr"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="0dp"
+                android:text="+CR" />
+            <CheckBox
+                android:id="@+id/checkBoxLf"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="+LF" />
         </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+            <Button
+                android:id="@+id/buttonClearTx"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="CLEAR_TX" />
+            <Button
+                android:id="@+id/buttonClearAll"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="CLEAR_ALL" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
             android:orientation="horizontal">
             <Spinner
                 android:id="@+id/spinnerDeviceList"
@@ -84,6 +112,10 @@
                 android:text="CONNECT" />
         </LinearLayout>
 
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="0"/>
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

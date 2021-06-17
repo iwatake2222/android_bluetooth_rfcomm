@@ -16,11 +16,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class BtRfcommHelper extends Thread {
     private static String TAG = "MyApp:BtRfcommHelper";
-
-
     private String SERVER_SERVICE_UUID = "00001101-0000-1000-8000-00805F9B34FB";    // SPP
     private BluetoothDevice m_server;
     private BluetoothAdapter m_adapter = BluetoothAdapter.getDefaultAdapter();
@@ -29,20 +29,27 @@ public class BtRfcommHelper extends Thread {
     private InputStream m_is;
     private boolean m_isStop = false;
 
+    public interface RxCallback {
+        void onRx(String text);
+    }
+    RxCallback m_rxCallback = null;
+    ArrayList<String> m_txTextList = new ArrayList<String>();
+    private final Lock m_lockTx = new ReentrantLock();
+
     public boolean init() {
-        Log.w(TAG, "[init] in");
+        Log.d(TAG, "[init] in");
 
         m_adapter = BluetoothAdapter.getDefaultAdapter();
         if (m_adapter == null) {
-            Log.w(TAG, "[initialize] No bluetooth support.");
+            Log.e(TAG, "[initialize] No bluetooth support.");
             return false;
         }
         if (!m_adapter.isEnabled()) {
-            Log.w(TAG, "[initialize] Bluetooth is disabled.");
+            Log.e(TAG, "[initialize] Bluetooth is disabled.");
             return false;
         }
 
-        Log.w(TAG, "[init] out");
+        Log.d(TAG, "[init] out");
         return true;
     }
 
@@ -58,6 +65,7 @@ public class BtRfcommHelper extends Thread {
     }
 
     public boolean connect(String serverName) {
+        Log.d(TAG, "[connect] in");
         Set<BluetoothDevice> serverList;
         ArrayList<String> nameList = new ArrayList<String>();
         serverList = m_adapter.getBondedDevices();
@@ -130,19 +138,19 @@ public class BtRfcommHelper extends Thread {
             return false;
         }
 
-        Log.w(TAG, "[init] out");
+        Log.d(TAG, "[connect] out");
         return true;
     }
 
     public boolean disconnect() {
-        Log.w(TAG, "[disconnect] in");
+        Log.d(TAG, "[disconnect] in");
         m_isStop = true;
         try {
             join();
             m_isStop = false;
         } catch (InterruptedException e) {
             e.printStackTrace();
-            Log.d(TAG, "[disconnect] Unable to join the thread.");
+            Log.e(TAG, "[disconnect] Unable to join the thread.");
             return false;
         }
 
@@ -150,7 +158,7 @@ public class BtRfcommHelper extends Thread {
             m_os.close();
         } catch (IOException e) {
             e.printStackTrace();
-            Log.d(TAG, "[disconnect] Unable to close output stream.");
+            Log.e(TAG, "[disconnect] Unable to close output stream.");
             return false;
         }
 
@@ -158,7 +166,7 @@ public class BtRfcommHelper extends Thread {
             m_is.close();
         } catch (IOException e) {
             e.printStackTrace();
-            Log.d(TAG, "[disconnect] Unable to close input stream.");
+            Log.e(TAG, "[disconnect] Unable to close input stream.");
             return false;
         }
 
@@ -166,24 +174,61 @@ public class BtRfcommHelper extends Thread {
             m_socket.close();
         } catch (IOException e) {
             e.printStackTrace();
-            Log.d(TAG, "[disconnect] Unable to close socket.");
+            Log.e(TAG, "[disconnect] Unable to close socket.");
             return false;
         }
 
-        Log.w(TAG, "[disconnect] out");
+        Log.d(TAG, "[disconnect] out");
         return true;
     }
 
-    public void run(){
-        Log.i(TAG, "[run] in");
+
+
+    public void run() {
+        Log.d(TAG, "[run] in");
         while (!m_isStop) {
+            m_lockTx.lock();
+            for (String txText : m_txTextList) {
+                try {
+                    m_os.write(txText.getBytes(Charset.forName("ascii")));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    Log.e(TAG, "[run] Unable to write to output stream.");
+                }
+            }
+            m_txTextList.clear();
+            m_lockTx.unlock();
+
             try {
-                m_os.write("Hello World from Android\n".getBytes(Charset.forName("ascii")));
+                if (m_is.available() > 0) {
+                    byte[] buffer = new byte[256];
+                    int bytes = m_is.read(buffer, 0, 256);
+                    if (bytes > 0) {
+                        String rxText = new String(buffer, 0, bytes);
+                        //                Log.i(TAG, "[run] rxText: " + rxText);
+                        if (m_rxCallback != null) {
+                            m_rxCallback.onRx(rxText);
+                        }
+                    }
+                }
             } catch (IOException e) {
                 e.printStackTrace();
-                Log.d(TAG, "[run] Unable to write to output stream.");
+                Log.e(TAG, "[run] Unable to read from input stream.");
             }
         }
-        Log.i(TAG, "[run] out");
+        Log.d(TAG, "[run] out");
     }
+
+    public void send(String str) {
+        m_lockTx.lock();
+        if (isAlive()) {
+            m_txTextList.add(str);
+        }
+        m_lockTx.unlock();
+    }
+
+    public void setRxCallback(RxCallback cb) {
+        m_rxCallback = cb;
+    }
+
 }
